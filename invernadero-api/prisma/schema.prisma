@@ -13,3 +13,111 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Usuario del sistema
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  // Relaciones
+  farms       Farm[]
+  pestReports PestReport[]
+
+  @@map("users")
+}
+
+// Granja o Finca
+model Farm {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  greenhouses Greenhouse[]
+
+  @@map("farms")
+}
+
+// Invernadero
+model Greenhouse {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  farmId      String
+  farm        Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  pestReports PestReport[]
+
+  @@map("greenhouses")
+}
+
+// Maestra de Plagas
+model Pest {
+  id             String  @id @default(uuid())
+  scientificName String
+  commonName     String  @unique
+  description    String?
+
+  // Relaciones
+  pestTreatments PestTreatment[]
+  pestReports    PestReport[]
+
+  @@map("pests")
+}
+
+// Maestra de Fitosanitarios
+model Treatment {
+  id              String  @id @default(uuid())
+  productName     String
+  activeComponent String
+  description     String?
+
+  // Relaciones
+  pestTreatments PestTreatment[]
+
+  @@map("treatments")
+}
+
+// Tabla pivote: Relación N:M entre Pest y Treatment
+model PestTreatment {
+  id String @id @default(uuid())
+
+  // Relaciones
+  pestId String
+  pest   Pest   @relation(fields: [pestId], references: [id], onDelete: Cascade)
+
+  treatmentId String
+  treatment   Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([pestId, treatmentId])
+  @@map("pest_treatments")
+}
+
+// Reporte de Detección de Plagas
+model PestReport {
+  id         String   @id @default(uuid())
+  imageUrl   String
+  confidence Float
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  // Relaciones
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  greenhouseId String
+  greenhouse   Greenhouse @relation(fields: [greenhouseId], references: [id], onDelete: Cascade)
+
+  pestId String
+  pest   Pest   @relation(fields: [pestId], references: [id], onDelete: Cascade)
+
+  @@map("pest_reports")
+}
